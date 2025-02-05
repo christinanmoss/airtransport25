@@ -7,6 +7,61 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
 ```
 
-## R Markdown
+## Bringing in the Data 
+```{r data_load, include=False}
+dat_large <- read.delim("TAFDetailed.txt", sep="\t", header=TRUE)
+dat_small <- read.delim("TAFDetailed_small.txt", sep="\t", header=TRUE)
+```
+
+## Defining Winners and Losers - Data Exploration 
+
+Identifying large and small airport hubs...
+```{r data_explore, warning=FALSE, message=FALSE}
+
+hub_large <- dat_large %>%
+    filter(SYSYEAR == 2013,  COMMUTER > 100000)
+
+hub_small <- dat_small %>%
+  filter(SYSYEAR == 2023, COMMUTER > 100000)
+
+```
+
+Looking at change over the ten years in the large and small hubs with over 100,000 commuter emplanements in 2023.
+```{r}
+large_change <- dat_large[dat_large$LOC_ID %in% hub_large$LOC_ID, ]
+
+small_change <- dat_small[dat_small$LOC_ID %in% hub_small$LOC_ID, ]
+
+ggplot(large_change, aes(x=SYSYEAR, y=COMMUTER, color=LOC_ID)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title="Airport Traffic Over Time (Large Hubs)",
+       x="Year",
+       y="Commuter Traffic",
+       color="Airport") +
+  scale_x_continuous(breaks=2013:2023)
+
+ggplot(small_change, aes(x=SYSYEAR, y=COMMUTER, color=LOC_ID)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title="Airport Traffic Over Time (Small Hubs)",
+       x="Year",
+       y="Commuter Traffic",
+       color="Airport") +
+  scale_x_continuous(breaks=2013:2023)
+```
+
+These charts are a little difficult to read but it is evident that Chicago and Boise are both the largest hubs in their respective size categories. With this in mind we look at the top 5 hubs in the country in each category that ha
+
+```{r hub}
+#planning to chart hubs with the largest percentage change from 2013 to 2023 to determine winners & losers 
+large_change <- large_change %>%
+  group_by(LOC_ID) %>%
+  summarise()
+```
