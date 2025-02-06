@@ -3,6 +3,9 @@ title: "Assignment 1: Air Transport Since 2013, Winners and Losers "
 author: "Christina Moss and Hao Zhu"
 date: "2025-02-03"
 output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -13,15 +16,36 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## Bringing in the Data 
+# Part One: Analyzing Winning and Losing Airports (2013-2023)
+
+This analysis examines changes in airport operations of major large and
+small hubs over the past decade (2013-2023). Using data from the FAA's
+Terminal Area Forecast, we define winners as airports that experienced
+the largest percentage increases in commuter enplanements and,
+conversly, losing airports as those which experienced the greatest
+decline. Commuter enplanements is our key metric for measuring success
+because it signifies an increase (or decrease) in connecting traffic,
+which is an important indicator for defining an airport as a hub. More
+connections means more total operations, signifying an airport with a
+steady flow of traffic rather than the rush hour and lulls dynamic of
+origin and destination airports.
+
+We focus our analysis on percentage change because we wanted to
+particularly highlight those airports experiencing the most growth (or
+greatest decline). Identifying which airports have experienced the most
+growth over the last decade can play a role in highlighting where
+airlines should prioritize investment and expansion.
+
 ```{r data_load, include=False}
 dat_large <- read.delim("TAFDetailed.txt", sep="\t", header=TRUE)
 dat_small <- read.delim("TAFDetailed_small.txt", sep="\t", header=TRUE)
 ```
 
-## Defining Winners and Losers - Data Exploration 
+## Defining Winners and Losers - Data Exploration
 
-Identifying large and small airport hubs...
+Here we identify large and small airport hubs with a commuter
+enplanement number of greater than 100,000 passengers.
+
 ```{r data_explore, warning=FALSE, message=FALSE}
 
 hub_large <- dat_large %>%
@@ -30,12 +54,7 @@ hub_large <- dat_large %>%
 hub_small <- dat_small %>%
   filter(SYSYEAR == 2023, COMMUTER > 100000)
 
-```
-
-Looking at change over the ten years in the large and small hubs with over 100,000 commuter emplanements in 2023.
-```{r}
 large_change <- dat_large[dat_large$LOC_ID %in% hub_large$LOC_ID, ]
-
 small_change <- dat_small[dat_small$LOC_ID %in% hub_small$LOC_ID, ]
 
 ggplot(large_change, aes(x=SYSYEAR, y=COMMUTER, color=LOC_ID)) +
@@ -57,11 +76,54 @@ ggplot(small_change, aes(x=SYSYEAR, y=COMMUTER, color=LOC_ID)) +
   scale_x_continuous(breaks=2013:2023)
 ```
 
-These charts are a little difficult to read but it is evident that Chicago and Boise are both the largest hubs in their respective size categories. With this in mind we look at the top 5 hubs in the country in each category that ha
+These charts are a little difficult to read but it is evident that
+Chicago and Boise are both the largest hubs in their respective size
+categories. However, in order to identify winners and losers, we are
+more interested in the change in commuter enplanements for hub airports
+from 2013 to 2023. ---MIGHT DELETE
 
 ```{r hub}
 #planning to chart hubs with the largest percentage change from 2013 to 2023 to determine winners & losers 
 large_change <- large_change %>%
   group_by(LOC_ID) %>%
-  summarise()
+  summarise(
+    start_value = first(COMMUTER),
+    end_value = last(COMMUTER),
+    tot_change = end_value - start_value,
+    pct_change = ((end_value - start_value) / start_value) * 100
+  )
+
+small_change <- small_change %>%
+  group_by(LOC_ID) %>%
+  summarise(
+    start_value = first(COMMUTER),
+    end_value = last(COMMUTER),
+    tot_change = end_value - start_value,
+    pct_change = ((end_value - start_value) / start_value) * 100
+  )
+
+# Horizontal Bar Chart - Percentage Change
+ggplot(small_change, aes(x = reorder(LOC_ID, pct_change), y = pct_change, fill = pct_change)) +
+  geom_col() +
+  coord_flip() +  
+  labs(title = "Percent Change in Commuter Enplanements (2013-2023)",
+       x = "Airport",
+       y = "Percent Change (%)") +
+  scale_fill_gradient(low = "red", high = "green") +
+  theme_minimal()
+
+# Horizontal Bar Chart - Total Change
+ggplot(airport_changes, aes(x = reorder(LOC_ID, Total_Change), y = Total_Change, fill = Total_Change)) +
+  geom_col() +
+  coord_flip() +  
+  labs(title = "Total Change in Commuter Enplanements (2013-2023)",
+       x = "Airport",
+       y = "Total Change (Passengers)") +
+  scale_fill_gradient(low = "red", high = "blue") +
+  theme_minimal()
+
 ```
+
+Small hub winners (greatest positive percent change) - FAI - SGF Small
+hub losers - SBA - CID Large hub winners (greatest positive percent
+change) - JFK - MCO Large hub losers - HNL - BWI
