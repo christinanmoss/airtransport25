@@ -36,7 +36,7 @@ greatest decline). Identifying which airports have experienced the most
 growth over the last decade can play a role in highlighting where
 airlines should prioritize investment and expansion.
 
-```{r data_load, include=False}
+```{r data_load, include=FALSE}
 dat_large <- read.delim("TAFDetailed.txt", sep="\t", header=TRUE)
 dat_small <- read.delim("TAFDetailed_small.txt", sep="\t", header=TRUE)
 ```
@@ -113,7 +113,7 @@ ggplot(small_change, aes(x = reorder(LOC_ID, pct_change), y = pct_change, fill =
   theme_minimal()
 
 # Horizontal Bar Chart - Total Change
-ggplot(airport_changes, aes(x = reorder(LOC_ID, Total_Change), y = Total_Change, fill = Total_Change)) +
+ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = tot_change, fill = tot_change)) +
   geom_col() +
   coord_flip() +  
   labs(title = "Total Change in Commuter Enplanements (2013-2023)",
