@@ -25,7 +25,7 @@ library(kableExtra)
 library(ggtext)
 ```
 
-# Part One: Analyzing Winning and Losing Airports (2013-2023)
+## Part One: Analyzing Winning and Losing Airports (2013-2023)
 
 This analysis examines changes in airport operations of major large and
 small hubs over the past decade (2013-2023). Using data from the FAA's
@@ -50,7 +50,7 @@ dat_large <- read.delim("TAFDetailed.txt", sep="\t", header=TRUE)
 dat_small <- read.delim("TAFDetailed_small.txt", sep="\t", header=TRUE)
 ```
 
-## Defining Winners and Losers - Data Exploration
+### Defining Winners and Losers - Data Exploration
 
 Here we identify large and small airport hubs with a commuter
 enplanement number of greater than 100,000 passengers.
