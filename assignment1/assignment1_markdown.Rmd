@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(ggplot2)
+library(knitr)
+library(kableExtra)
 ```
 
 # Part One: Analyzing Winning and Losing Airports (2013-2023)
@@ -123,6 +125,159 @@ ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill =
 
 ```
 
-Small hub winners (greatest positive percent change) - FAI - SGF Small
-hub losers - SBA - CID Large hub winners (greatest positive percent
-change) - JFK - MCO Large hub losers - HNL - BWI
+Small hub winners (greatest positive percent change) - FAI - SGF 
+Small hub losers - SBA - CID 
+Large hub winners (greatest positive percent change) - LGA -JFK
+Large hub losers - ORD - ATL
+
+
+
+## Part Two: Delay and Departure Change in 2013 and 2023
+```{r data_load2, include=FALSE}
+dat_2013 <- read.csv("Performance_2013_Jan/Performance_2013_Jan.csv")
+dat_2023 <- read.csv("Performance_2023_Jan/Performance_2023_Jan.csv")
+```
+
+```{r data_cleaning, include=FALSE}
+selected_airports <- c("FAI", "SGF", "SBA", "CID", "LGA", "JFK", "ORD", "ATL")
+performance_2013 <- dat_2013 %>%
+  filter(Origin %in% selected_airports | Dest %in% selected_airports) %>%
+  select(c("Year", "Month", "FlightDate", "Origin", "Dest", 
+                     "DepDelay", "DepDelayMinutes", "DepDel15", 
+                     "ArrDelay", "ArrDelayMinutes", "ArrDel15"))
+
+performance_2023 <- dat_2023 %>%
+  filter(Origin %in% selected_airports | Dest %in% selected_airports)%>%
+  select(c("Year", "Month", "FlightDate", "Origin", "Dest", 
+                     "DepDelay", "DepDelayMinutes", "DepDel15", 
+                     "ArrDelay", "ArrDelayMinutes", "ArrDel15"))
+```
+
+```{r performance, warning=FALSE, message=FALSE}
+# Combine datasets
+combined_data <- bind_rows(
+  performance_2013 %>% mutate(dataset = "2013"),
+  performance_2023 %>% mutate(dataset = "2023")
+)
+
+
+airport_delays <- combined_data %>%
+  # Create separate rows for origin and destination analysis
+  pivot_longer(
+    cols = c(Origin, Dest),
+    names_to = "airport_role",
+    values_to = "airport"
+  ) %>%
+  filter(airport %in% selected_airports) %>%
+  group_by(dataset, airport, airport_role) %>%
+  summarize(
+    avg_dep_delay = mean(DepDelay, na.rm = TRUE),
+    avg_arr_delay = mean(ArrDelay, na.rm = TRUE),
+    n_flights = n()
+  ) %>%
+  ungroup()
+
+# Create long format for plotting
+delays_long <- airport_delays %>%
+  pivot_longer(
+    cols = c(avg_dep_delay, avg_arr_delay),
+    names_to = "delay_type",
+    values_to = "delay_minutes"
+  )
+
+# Visualization
+ggplot(delays_long, aes(x = factor(airport, levels = selected_airports), 
+                       y = delay_minutes, 
+                       fill = dataset)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  facet_grid(airport_role ~ delay_type,
+             labeller = labeller(
+               delay_type = c(
+                 "avg_dep_delay" = "Departure Delay",
+                 "avg_arr_delay" = "Arrival Delay"),
+               airport_role = c(
+                 "Origin" = "As Origin Airport",
+                 "Dest" = "As Destination Airport"))) +
+  theme_minimal() +
+  labs(
+    title = "Average Flight Delays for Selected Airports: 2013 vs 2023",
+    subtitle = "Analysis of delays when airport serves as origin vs destination",
+    x = "Airport",
+    y = "Average Delay (minutes)",
+    fill = "Year"
+  ) +
+  scale_fill_manual(values = c("2013" = "#FF9999", "2023" = "#66C2A5")) +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),
+    axis.title = element_text(size = 12),
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  )
+```
+
+
+```{r summary, warning=FALSE, message=FALSE}
+# Create summary statistics
+summary_stats <- airport_delays %>%
+  group_by(dataset, airport) %>%
+  summarize(
+    avg_dep_delay_as_origin = round(mean(avg_dep_delay[airport_role == "Origin"], na.rm = TRUE), 1),
+    avg_arr_delay_as_origin = round(mean(avg_arr_delay[airport_role == "Origin"], na.rm = TRUE), 1),
+    avg_dep_delay_as_dest = round(mean(avg_dep_delay[airport_role == "Dest"], na.rm = TRUE), 1),
+    avg_arr_delay_as_dest = round(mean(avg_arr_delay[airport_role == "Dest"], na.rm = TRUE), 1),
+    total_flights = sum(n_flights)
+  ) %>%
+  arrange(airport, dataset)
+
+print(summary_stats)
+
+# Calculate year-over-year changes
+delay_changes <- summary_stats %>%
+  select(-total_flights) %>%
+  pivot_wider(
+    names_from = dataset,
+    values_from = c(avg_dep_delay_as_origin, avg_arr_delay_as_origin,
+                   avg_dep_delay_as_dest, avg_arr_delay_as_dest)
+  ) %>%
+  mutate(
+    dep_delay_change_origin = avg_dep_delay_as_origin_2023 - avg_dep_delay_as_origin_2013,
+    arr_delay_change_origin = avg_arr_delay_as_origin_2023 - avg_arr_delay_as_origin_2013,
+    dep_delay_change_dest = avg_dep_delay_as_dest_2023 - avg_dep_delay_as_dest_2013,
+    arr_delay_change_dest = avg_arr_delay_as_dest_2023 - avg_arr_delay_as_dest_2013
+  )
+
+print(delay_changes)
+```
+```{r table, warning=FALSE, message=FALSE}
+# Prepare the data for display
+delay_table <- delay_changes %>%
+  select(airport,
+         dep_delay_change_origin,
+         arr_delay_change_origin,
+         dep_delay_change_dest,
+         arr_delay_change_dest) %>%
+  mutate(across(where(is.numeric), round, 1)) %>%
+  rename(
+    "Airport" = airport,
+    "Departure Delay\n(as Origin)" = dep_delay_change_origin,
+    "Arrival Delay\n(as Origin)" = arr_delay_change_origin,
+    "Departure Delay\n(as Destination)" = dep_delay_change_dest,
+    "Arrival Delay\n(as Destination)" = arr_delay_change_dest
+  )
+
+# Create a formatted table
+kable(delay_table, format = "html", 
+      caption = "Changes in Flight Delays (2023 vs 2013) in Minutes") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE, background = "#f0f0f0") %>%
+  column_spec(1, bold = TRUE) %>%
+  add_header_above(c(" " = 1, "As Origin" = 2, "As Destination" = 2)) %>%
+  footnote(
+    general = "Positive values indicate increased delays in 2023 compared to 2013",
+    general_title = "Note: "
+  )
+```
+
