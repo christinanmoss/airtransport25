@@ -76,11 +76,10 @@ ggplot(small_change, aes(x=SYSYEAR, y=COMMUTER, color=LOC_ID)) +
   scale_x_continuous(breaks=2013:2023)
 ```
 
-These charts are a little difficult to read but it is evident that
-Chicago and Boise are both the largest hubs in their respective size
-categories. However, in order to identify winners and losers, we are
-more interested in the change in commuter enplanements for hub airports
-from 2013 to 2023. ---MIGHT DELETE
+The charts above highlight that Chicago and Boise are both the largest
+hubs in their respective size categories. However, in order to identify
+winners and losers, we are more interested in the change in commuter
+enplanements for hub airports from 2013 to 2023.
 
 ```{r hub}
 #planning to chart hubs with the largest percentage change from 2013 to 2023 to determine winners & losers 
@@ -102,21 +101,21 @@ small_change <- small_change %>%
     pct_change = ((end_value - start_value) / start_value) * 100
   )
 
-# Horizontal Bar Chart - Percentage Change
+# Horizontal Bar Chart - Percentage Change - Small Hubs
 ggplot(small_change, aes(x = reorder(LOC_ID, pct_change), y = pct_change, fill = pct_change)) +
   geom_col() +
   coord_flip() +  
-  labs(title = "Percent Change in Commuter Enplanements (2013-2023)",
+  labs(title = "Percent Change in Commuter Enplanements (Small Hubs)",
        x = "Airport",
        y = "Percent Change (%)") +
-  scale_fill_gradient(low = "red", high = "green") +
+  scale_fill_gradient(low = "red", high = "blue") +
   theme_minimal()
 
-# Horizontal Bar Chart - Total Change
-ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = tot_change, fill = tot_change)) +
+# Horizontal Bar Chart - Percent Change - Large Hubs
+ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill = pct_change)) +
   geom_col() +
   coord_flip() +  
-  labs(title = "Total Change in Commuter Enplanements (2013-2023)",
+  labs(title = "Percent Change in Commuter Enplanements (Large Hubs)",
        x = "Airport",
        y = "Total Change (Passengers)") +
   scale_fill_gradient(low = "red", high = "blue") +
