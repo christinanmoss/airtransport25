@@ -1,8 +1,14 @@
 ---
 title: "Assignment 1: Air Transport Since 2013, Winners and Losers "
 author: "Christina Moss and Hao Zhu"
-date: "2025-02-03"
-output: html_document
+date: "`r Sys.Date()`" 
+output: 
+  html_document:
+    toc: true 
+    theme: sandstone
+    toc_float: true
+    toc_depth: 2 
+    code_folding: hide
 editor_options: 
   markdown: 
     wrap: 72
@@ -16,6 +22,7 @@ library(dplyr)
 library(ggplot2)
 library(knitr)
 library(kableExtra)
+library(ggtext)
 ```
 
 # Part One: Analyzing Winning and Losing Airports (2013-2023)
@@ -83,7 +90,7 @@ hubs in their respective size categories. However, in order to identify
 winners and losers, we are more interested in the change in commuter
 enplanements for hub airports from 2013 to 2023.
 
-```{r hub}
+```{r hub, fig.height=6, fig.width=8}
 #planning to chart hubs with the largest percentage change from 2013 to 2023 to determine winners & losers 
 large_change <- large_change %>%
   group_by(LOC_ID) %>%
@@ -110,9 +117,12 @@ ggplot(small_change, aes(x = reorder(LOC_ID, pct_change), y = pct_change, fill =
   labs(title = "Percent Change in Commuter Enplanements (Small Hubs)",
        x = "Airport",
        y = "Percent Change (%)") +
-  scale_fill_gradient(low = "red", high = "blue") +
+  scale_fill_gradient(low = "#FC6189", high = "#3BA4BF") +
   theme_minimal()
+```
 
+
+```{r hub2}
 # Horizontal Bar Chart - Percent Change - Large Hubs
 ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill = pct_change)) +
   geom_col() +
@@ -120,19 +130,27 @@ ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill =
   labs(title = "Percent Change in Commuter Enplanements (Large Hubs)",
        x = "Airport",
        y = "Total Change (Passengers)") +
-  scale_fill_gradient(low = "red", high = "blue") +
+  scale_fill_gradient(low = "#FC6189", high = "#3BA4BF") +
   theme_minimal()
 
 ```
 
-Small hub winners (greatest positive percent change) - FAI - SGF 
-Small hub losers - SBA - CID 
-Large hub winners (greatest positive percent change) - LGA -JFK
-Large hub losers - ORD - ATL
+### Winners and Losers
+
+  + Small hub winners (greatest positive percent change): FAI - SGF 
+  + Small hub losers : SBA - CID 
+  + Large hub winners (greatest positive percent change): LGA -JFK
+  + Large hub losers:  ORD - ATL
 
 
 
-## Part Two: Delay and Departure Change in 2013 and 2023
+## Part Two:  Airport Delay Patterns (2013-2023)
+
+This analysis examines the operational efficiency of previously identified winner and loser airports by comparing their delay metrics between January 2013 and January 2023. Using data from the Office of Airline Information, Bureau of Transportation Statistics (BTS), we analyze both arrival and departure delays for each airport in their roles as origin and destination points. Delay metrics serve as our key indicators for measuring operational efficiency, as they reflect an airport's ability to manage traffic flow and maintain service quality regardless of their hub status. By examining these metrics across different operational roles, we can better understand how changes in hub status affect an airport's ability to handle traffic efficiently.
+
+The focus on delay changes reveals an interesting contrast between hub growth and operational efficiency. Among small hub winners, FAI and SGF showed relatively modest delay increases despite their significant growth in commuter enplanements - FAI actually improved its destination arrival performance (-6.3 minutes), while SGF saw minimal increases (0.2-3.0 minutes). Small hub losers displayed mixed performance: SBA experienced the largest delay increases (8.1-12.2 minutes) while CID showed improvement in destination metrics (-1.4 to -2.5 minutes). In the large hub category, winners LGA and JFK faced operational challenges with their growth, showing notable delay increases (JFK: 4.2-10.3 minutes), while large hub losers demonstrated divergent patterns - ATL experienced significant delay increases (4.6-11.3 minutes) while ORD maintained relatively stable operations with some improvements in origin delays (-1.2 to -1.6 minutes). Our findings suggest that growth in hub status doesn't necessarily correlate with decreased operational efficiency. 
+
+
 ```{r data_load2, include=FALSE}
 dat_2013 <- read.csv("Performance_2013_Jan/Performance_2013_Jan.csv")
 dat_2023 <- read.csv("Performance_2023_Jan/Performance_2023_Jan.csv")
@@ -200,18 +218,18 @@ ggplot(delays_long, aes(x = factor(airport, levels = selected_airports),
                  "Dest" = "As Destination Airport"))) +
   theme_minimal() +
   labs(
-    title = "Average Flight Delays for Selected Airports: 2013 vs 2023",
+    title = "Average Flight Delays for Selected Airports: **<span style='color:#db7996;'>2013</span>** vs **<span style='color:#6a9fb8;'>2023</span>**",
     subtitle = "Analysis of delays when airport serves as origin vs destination",
     x = "Airport",
     y = "Average Delay (minutes)",
     fill = "Year"
   ) +
-  scale_fill_manual(values = c("2013" = "#FF9999", "2023" = "#66C2A5")) +
+  scale_fill_manual(values = c("2013" = "#db7996", "2023" = "#6a9fb8")) +
   theme(
     axis.text.x = element_text(angle = 0, hjust = 1),
     axis.title = element_text(size = 12),
-    plot.title = element_text(size = 14, face = "bold"),
-    legend.position = "bottom",
+    plot.title = element_markdown(size = 14, face = "bold"),
+    legend.position = "none",
     panel.grid.minor = element_blank(),
     strip.text = element_text(size = 12, face = "bold")
   )
@@ -231,7 +249,6 @@ summary_stats <- airport_delays %>%
   ) %>%
   arrange(airport, dataset)
 
-print(summary_stats)
 
 # Calculate year-over-year changes
 delay_changes <- summary_stats %>%
@@ -248,10 +265,9 @@ delay_changes <- summary_stats %>%
     arr_delay_change_dest = avg_arr_delay_as_dest_2023 - avg_arr_delay_as_dest_2013
   )
 
-print(delay_changes)
 ```
+
 ```{r table, warning=FALSE, message=FALSE}
-# Prepare the data for display
 delay_table <- delay_changes %>%
   select(airport,
          dep_delay_change_origin,
