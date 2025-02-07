@@ -121,7 +121,6 @@ ggplot(small_change, aes(x = reorder(LOC_ID, pct_change), y = pct_change, fill =
   theme_minimal()
 ```
 
-
 ```{r hub2}
 # Horizontal Bar Chart - Percent Change - Large Hubs
 ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill = pct_change)) +
@@ -137,19 +136,41 @@ ggplot(large_change, aes(x = reorder(LOC_ID, tot_change), y = pct_change, fill =
 
 ### Winners and Losers
 
-  + Small hub winners (greatest positive percent change): FAI - SGF 
-  + Small hub losers : SBA - CID 
-  + Large hub winners (greatest positive percent change): LGA -JFK
-  + Large hub losers:  ORD - ATL
+-   Small hub winners (greatest positive percent change): FAI - SGF
+-   Small hub losers : SBA - CID
+-   Large hub winners (greatest positive percent change): LGA -JFK
+-   Large hub losers: ORD - ATL
 
+## Part Two: Airport Delay Patterns (2013-2023)
 
+This analysis examines the operational efficiency of previously
+identified winner and loser airports by comparing their delay metrics
+between January 2013 and January 2023. Using data from the Office of
+Airline Information, Bureau of Transportation Statistics (BTS), we
+analyze both arrival and departure delays for each airport in their
+roles as origin and destination points. Delay metrics serve as our key
+indicators for measuring operational efficiency, as they reflect an
+airport's ability to manage traffic flow and maintain service quality
+regardless of their hub status. By examining these metrics across
+different operational roles, we can better understand how changes in hub
+status affect an airport's ability to handle traffic efficiently.
 
-## Part Two:  Airport Delay Patterns (2013-2023)
-
-This analysis examines the operational efficiency of previously identified winner and loser airports by comparing their delay metrics between January 2013 and January 2023. Using data from the Office of Airline Information, Bureau of Transportation Statistics (BTS), we analyze both arrival and departure delays for each airport in their roles as origin and destination points. Delay metrics serve as our key indicators for measuring operational efficiency, as they reflect an airport's ability to manage traffic flow and maintain service quality regardless of their hub status. By examining these metrics across different operational roles, we can better understand how changes in hub status affect an airport's ability to handle traffic efficiently.
-
-The focus on delay changes reveals an interesting contrast between hub growth and operational efficiency. Among small hub winners, FAI and SGF showed relatively modest delay increases despite their significant growth in commuter enplanements - FAI actually improved its destination arrival performance (-6.3 minutes), while SGF saw minimal increases (0.2-3.0 minutes). Small hub losers displayed mixed performance: SBA experienced the largest delay increases (8.1-12.2 minutes) while CID showed improvement in destination metrics (-1.4 to -2.5 minutes). In the large hub category, winners LGA and JFK faced operational challenges with their growth, showing notable delay increases (JFK: 4.2-10.3 minutes), while large hub losers demonstrated divergent patterns - ATL experienced significant delay increases (4.6-11.3 minutes) while ORD maintained relatively stable operations with some improvements in origin delays (-1.2 to -1.6 minutes). Our findings suggest that growth in hub status doesn't necessarily correlate with decreased operational efficiency. 
-
+The focus on delay changes reveals an interesting contrast between hub
+growth and operational efficiency. Among small hub winners, FAI and SGF
+showed relatively modest delay increases despite their significant
+growth in commuter enplanements - FAI actually improved its destination
+arrival performance (-6.3 minutes), while SGF saw minimal increases
+(0.2-3.0 minutes). Small hub losers displayed mixed performance: SBA
+experienced the largest delay increases (8.1-12.2 minutes) while CID
+showed improvement in destination metrics (-1.4 to -2.5 minutes). In the
+large hub category, winners LGA and JFK faced operational challenges
+with their growth, showing notable delay increases (JFK: 4.2-10.3
+minutes), while large hub losers demonstrated divergent patterns - ATL
+experienced significant delay increases (4.6-11.3 minutes) while ORD
+maintained relatively stable operations with some improvements in origin
+delays (-1.2 to -1.6 minutes). Our findings suggest that growth in hub
+status doesn't necessarily correlate with decreased operational
+efficiency.
 
 ```{r data_load2, include=FALSE}
 dat_2013 <- read.csv("Performance_2013_Jan/Performance_2013_Jan.csv")
@@ -235,7 +256,6 @@ ggplot(delays_long, aes(x = factor(airport, levels = selected_airports),
   )
 ```
 
-
 ```{r summary, warning=FALSE, message=FALSE}
 # Create summary statistics
 summary_stats <- airport_delays %>%
@@ -296,4 +316,3 @@ kable(delay_table, format = "html",
     general_title = "Note: "
   )
 ```
-
