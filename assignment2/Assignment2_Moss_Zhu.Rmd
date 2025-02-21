@@ -1,30 +1,36 @@
 ---
-title: "Assignemnt2"
-author: "Christina Moss"
-date: "2025-02-21"
-output: html_document
+title: "Assignment 1: Air Transport Since 2013, Winners and Losers "
+author: "Christina Moss and Hao Zhu"
+date: "`r Sys.Date()`" 
+output: 
+  html_document:
+    toc: true 
+    theme: sandstone
+    toc_float: true
+    toc_depth: 2 
+    code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(ggtext)
 ```
 
-## R Markdown
+## Exploring Financial Trends Across Airports with Shared Traits 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+In this analysis we will examine financial and budgeting patterns at the Savannah/Hilton Head International Airport and the Charleston International Airport. The cities of Savannah, GA and Charleston, SC are both attractive tourist destinations in the coastal south with relatively similar population sizes. 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+### Data Preparation 
 
-```{r cars}
-summary(cars)
-```
+### Exploring Revenue Breakdown Over Time 
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Exploring Cost Breakdown Over Time 
