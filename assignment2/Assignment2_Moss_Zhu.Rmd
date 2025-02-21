@@ -75,9 +75,118 @@ print(charleston_sav_2123 %>%
 
 ```
 
+```{r}
+# Select relevant columns for analysis
+charleston_sav_analysis <- charleston_sav_2123 %>%
+  select(
+    # Identifying Information
+    `Airport Name`, 
+    `Hub Size`,
+    State,
+    Year,
+    
+    # Key Revenue Metrics
+    `Passenger airline landing fees`,
+    `Terminal arrival fees - rents - utilities`,
+    `Total Passenger Airline Aeronautical Revenue`,
+    `Total Non-Passenger Aeronautical Revenue`,
+    `Total Aeronautical Revenue`,
+    `Parking and ground transportation`,
+    `Terminal-food and beverage`,
+    `Terminal-retail stores and duty free`,
+    `Rental cars-excludes customer facility charges`,
+    `Total Non-Aeronautical Revenue`,
+    `Total Operating Revenue`,
+    
+    # Key Cost Metrics
+    `Personnel compensation and benefits`,
+    `Communications and utilities`,
+    `Supplies and materials`,
+    `Contractual services`,
+    `Total Operating Expenses`,
+    `Operating Income`,
+    
+    # Operational Metrics
+    Enplanements,
+    `Landed weights in pounds`,
+    `Annual aircraft operations`,
+    `Passenger airline cost per enplanement`,
+    `Full time equivalent employees at end of year`
+  )
+
+# Check the structure
+glimpse(charleston_sav_analysis)
+```
+
 ### Exploring Revenue Breakdown Over Time 
 ```{r}
+# 1. total revenue comparison
+ggplot(charleston_sav_analysis, 
+       aes(x = Year, y = `Total Operating Revenue`/1000000, 
+           fill = `Airport Name`, 
+           group = `Airport Name`)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(title = "Total Operating Revenue by Airport (2021-2023)",
+       y = "Revenue (Millions USD)",
+       x = "Year") +
+  theme(legend.position = "bottom")
 
+# 2. revenue breakdown analysis
+revenue_breakdown <- charleston_sav_analysis %>%
+  select(`Airport Name`, Year,
+         `Total Aeronautical Revenue`,
+         `Total Non-Aeronautical Revenue`) %>%
+  pivot_longer(cols = c(`Total Aeronautical Revenue`, `Total Non-Aeronautical Revenue`),
+               names_to = "Revenue_Type",
+               values_to = "Amount")
+
+ggplot(revenue_breakdown, 
+       aes(x = Year, y = Amount/1000000, fill = Revenue_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_wrap(~`Airport Name`) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(title = "Revenue Composition by Airport",
+       y = "Revenue (Millions USD)",
+       fill = "Revenue Type") +
+  theme(legend.position = "bottom")
+
+# 3. Detailed non-aeronautical revenue analysis
+non_aero_breakdown <- charleston_sav_analysis %>%
+  select(`Airport Name`, Year,
+         `Parking and ground transportation`,
+         `Terminal-food and beverage`,
+         `Terminal-retail stores and duty free`,
+         `Rental cars-excludes customer facility charges`) %>%
+  pivot_longer(cols = -c(`Airport Name`, Year),
+               names_to = "Revenue_Source",
+               values_to = "Amount")
+
+# Visualize non-aeronautical revenue breakdown
+ggplot(non_aero_breakdown, 
+       aes(x = Year, y = Amount/1000000, fill = Revenue_Source)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_wrap(~`Airport Name`) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(title = "Non-Aeronautical Revenue Sources",
+       y = "Revenue (Millions USD)",
+       fill = "Revenue Source") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle =0))
+
+# 4. Calculate revenue per enplanement
+revenue_metrics <- charleston_sav_analysis %>%
+  group_by(`Airport Name`, Year) %>%
+  summarize(
+    Revenue_Per_Enplanement = `Total Operating Revenue` / Enplanements,
+    Aero_Revenue_Per_Enplanement = `Total Aeronautical Revenue` / Enplanements,
+    Non_Aero_Revenue_Per_Enplanement = `Total Non-Aeronautical Revenue` / Enplanements
+  )
+
+print(revenue_metrics)
 ```
 
 ```{r}
