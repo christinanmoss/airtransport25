@@ -195,3 +195,131 @@ print(revenue_metrics)
 
 
 ### Exploring Cost Breakdown Over Time 
+
+```{r}
+# Key Cost Metrics
+#`Personnel compensation and benefits`,
+#`Communications and utilities`,
+#`Supplies and materials`,
+#`Contractual services`,
+#`Total Operating Expenses`,
+#`Operating Income`,
+
+ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Total Operating Expenses`, group=`Airport Name`)) +
+  geom_line(aes(color=`Airport Name`)) +
+  geom_point(aes(color=`Airport Name`)) + 
+  scale_color_brewer(palette="Paired") +
+  scale_x_discrete(breaks=c("2021", "2022", "2023")) +
+  scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
+  theme_minimal() +
+  labs(x="Year",
+       y="Total Operating Expenses",
+       color="Airport Name")
+
+```
+
+```{r}
+# Visualizing expenses vs. income 
+ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Operating Income`, group=`Airport Name`)) +
+  geom_line(aes(color=`Airport Name`)) +
+  geom_point(aes(color=`Airport Name`)) + 
+  scale_color_brewer(palette="Paired") +
+  scale_x_discrete(breaks=c("2021", "2022", "2023")) +
+  scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
+  theme_minimal() +
+  labs(x="Year",
+       y="Total Operating Income",
+       color="Airport Name")
+```
+
+```{r}
+expenses_long <- charleston_sav_analysis %>%
+  pivot_longer(
+    cols = c(`Personnel compensation and benefits`,
+             `Communications and utilities`,
+             `Supplies and materials`,
+             `Contractual services`),
+    names_to = "Category",
+    values_to = "Amount"
+  )
+
+ggplot(expenses_long, aes(x=factor(Year), y=Amount, fill=Category)) +
+  geom_col(position="dodge") +
+  facet_wrap(~`Airport Name`, scales="free_y") +
+  scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
+  scale_fill_brewer(palette="Set2") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
+  labs(x="Year",
+       y="Amount ($M)",
+       title="Expense Categories by Airport Over Time",
+       fill="Expense Category")
+```
+
+```{r expense_table}
+# Calculate specific cost changes over time to see which areas of expense experienced higher investment or cuts
+changes_table <- charleston_sav_analysis %>%
+  select(`Airport Name`, Year, 
+         `Personnel compensation and benefits`,
+         `Communications and utilities`,
+         `Supplies and materials`,
+         `Contractual services`) %>%
+  group_by(`Airport Name`) %>%
+  summarize(
+    # Personnel
+    `Personnel % Change 2021-2022` = ((`Personnel compensation and benefits`[Year == 2022] - 
+                                      `Personnel compensation and benefits`[Year == 2021]) / 
+                                      `Personnel compensation and benefits`[Year == 2021] * 100),
+    `Personnel % Change 2022-2023` = ((`Personnel compensation and benefits`[Year == 2023] - 
+                                      `Personnel compensation and benefits`[Year == 2022]) / 
+                                      `Personnel compensation and benefits`[Year == 2022] * 100),
+    `Personnel Total % Change` = ((`Personnel compensation and benefits`[Year == 2023] - 
+                                  `Personnel compensation and benefits`[Year == 2021]) / 
+                                  `Personnel compensation and benefits`[Year == 2021] * 100),
+    
+    # Communications
+    `Communications % Change 2021-2022` = ((`Communications and utilities`[Year == 2022] - 
+                                          `Communications and utilities`[Year == 2021]) / 
+                                          `Communications and utilities`[Year == 2021] * 100),
+    `Communications % Change 2022-2023` = ((`Communications and utilities`[Year == 2023] - 
+                                          `Communications and utilities`[Year == 2022]) / 
+                                          `Communications and utilities`[Year == 2022] * 100),
+    `Communications Total % Change` = ((`Communications and utilities`[Year == 2023] - 
+                                      `Communications and utilities`[Year == 2021]) / 
+                                      `Communications and utilities`[Year == 2021] * 100),
+    
+    # Supplies
+    `Supplies % Change 2021-2022` = ((`Supplies and materials`[Year == 2022] - 
+                                     `Supplies and materials`[Year == 2021]) / 
+                                     `Supplies and materials`[Year == 2021] * 100),
+    `Supplies % Change 2022-2023` = ((`Supplies and materials`[Year == 2023] - 
+                                     `Supplies and materials`[Year == 2022]) / 
+                                     `Supplies and materials`[Year == 2022] * 100),
+    `Supplies Total % Change` = ((`Supplies and materials`[Year == 2023] - 
+                                 `Supplies and materials`[Year == 2021]) / 
+                                 `Supplies and materials`[Year == 2021] * 100),
+    
+    # Contractual
+    `Contractual % Change 2021-2022` = ((`Contractual services`[Year == 2022] - 
+                                        `Contractual services`[Year == 2021]) / 
+                                        `Contractual services`[Year == 2021] * 100),
+    `Contractual % Change 2022-2023` = ((`Contractual services`[Year == 2023] - 
+                                        `Contractual services`[Year == 2022]) / 
+                                        `Contractual services`[Year == 2022] * 100),
+    `Contractual Total % Change` = ((`Contractual services`[Year == 2023] - 
+                                    `Contractual services`[Year == 2021]) / 
+                                    `Contractual services`[Year == 2021] * 100)
+  ) %>%
+  # Round all numeric columns to 1 decimal place
+  mutate(across(where(is.numeric), ~round(., 1)))
+
+
+changes_table %>%
+  kable(format = "markdown", 
+        caption = "Percentage Changes in Expense Categories (2021-2023)")
+```
+
+Looks like Savannah made great increases to their contractual services expenses....
