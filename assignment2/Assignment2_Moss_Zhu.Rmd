@@ -23,6 +23,9 @@ library(ggplot2)
 library(knitr)
 library(kableExtra)
 library(ggtext)
+library(readr)
+library(tidyr)
+library(ggplot2)
 ```
 
 ## Exploring Financial Trends Across Airports with Shared Traits 
@@ -30,7 +33,56 @@ library(ggtext)
 In this analysis we will examine financial and budgeting patterns at the Savannah/Hilton Head International Airport and the Charleston International Airport. The cities of Savannah, GA and Charleston, SC are both attractive tourist destinations in the coastal south with relatively similar population sizes. 
 
 ### Data Preparation 
+```{r}
+dat_2021 <- read_csv("Report127_2021.csv",
+                     skip = 3,
+                     na = "",
+                     show_col_types = FALSE)
+names(dat_2021) <- trimws(names(dat_2021))
+
+dat_2022 <- read_csv("Report127_2022.csv",
+                     skip = 3,
+                     na = "",
+                     show_col_types = FALSE)
+names(dat_2022) <- trimws(names(dat_2022))
+
+dat_2023 <- read_csv("Report127_2023.csv",
+                     skip = 3,
+                     na = "",
+                     show_col_types = FALSE)
+names(dat_2023) <- trimws(names(dat_2023))
+
+```
+
+```{r}
+charleston_sav_2123 <- rbind(
+  dat_2021 %>% 
+    filter(`Airport Name` %in% c("CHARLESTON INTL", "SAVANNAH INTERNATIONAL")),
+  dat_2022 %>% 
+    filter(`Airport Name` %in% c("CHARLESTON INTL", "SAVANNAH INTERNATIONAL")),
+  dat_2023 %>% 
+    filter(`Airport Name` %in% c("CHARLESTON INTL", "SAVANNAH INTERNATIONAL")))
+
+charleston_sav_2123 <- charleston_sav_2123 %>%
+  mutate(
+    Year = as.numeric(substr(FYE, nchar(FYE)-3, nchar(FYE)))  # Extract last 4 characters for year
+  )
+
+# Verify the result
+print(charleston_sav_2123 %>% 
+  select(`Airport Name`, FYE, Year) %>%
+  arrange(Year, FYE))
+
+```
 
 ### Exploring Revenue Breakdown Over Time 
+```{r}
+
+```
+
+```{r}
+
+```
+
 
 ### Exploring Cost Breakdown Over Time 
