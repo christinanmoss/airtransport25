@@ -187,10 +187,12 @@ revenue_metrics <- charleston_sav_analysis %>%
   )
 
 print(revenue_metrics)
+
 ```
 ### Exploring Cost Breakdown Over Time 
 
 ```{r}
+<<<<<<< Updated upstream
 # Key Cost Metrics
 #`Personnel compensation and benefits`,
 #`Communications and utilities`,
@@ -209,7 +211,134 @@ ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Total Operating Expenses`
   labs(x="Year",
        y="Total Operating Expenses",
        color="Airport Name")
+=======
+ggplot(charleston_sav_analysis, 
+       aes(x = as.factor(Year), y = `Total Operating Revenue`/1000000, 
+           color = `Airport Name`, 
+           group = `Airport Name`)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(title = "Total Operating Revenue (2021-2023)",
+       subtitle = "Charleston Int'l vs Savannah Int'l",
+       y = "Revenue (Millions USD)",
+       x = "Year",
+       color = "Airport Name") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c("#FF7F7F", "#7FB3D5"))
+>>>>>>> Stashed changes
 
+# Create better formatted summary table
+summary_table <- revenue_changes %>%
+ select(`Airport Name`, Year,
+        `Total Operating Revenue`,
+        Total_Revenue_YoY,
+        Aero_Revenue_YoY,
+        Non_Aero_Revenue_YoY) %>%
+ arrange(`Airport Name`, Year) %>%
+ mutate(
+   Year_Change = paste(Year-1, "to", Year),
+   # Rename and format percentage columns
+   `Total Revenue Change` = sprintf("%.1f%%", Total_Revenue_YoY),
+   `Aeronautical Revenue Change` = sprintf("%.1f%%", Aero_Revenue_YoY),
+   `Non-Aeronautical Revenue Change` = sprintf("%.1f%%", Non_Aero_Revenue_YoY)
+ ) %>%
+ filter(!is.na(Total_Revenue_YoY)) %>%  # Remove rows where YoY can't be calculated
+ select(`Airport Name`, Year_Change, 
+        `Total Revenue Change`,
+        `Aeronautical Revenue Change`,
+        `Non-Aeronautical Revenue Change`) %>%
+ arrange(Year_Change)
+
+# Print formatted table
+print("Revenue Changes by Year")
+print(summary_table)
+
+# Improved revenue composition plot
+ggplot(charleston_sav_analysis, 
+      aes(x = as.factor(Year))) +
+ geom_line(aes(y = `Total Aeronautical Revenue`/1000000, color = "Aeronautical", group = 1), size = 1.2) +
+ geom_line(aes(y = `Total Non-Aeronautical Revenue`/1000000, color = "Non-Aeronautical", group = 1), size = 1.2) +
+ geom_point(aes(y = `Total Aeronautical Revenue`/1000000, color = "Aeronautical"), size = 3) +
+ geom_point(aes(y = `Total Non-Aeronautical Revenue`/1000000, color = "Non-Aeronautical"), size = 3) +
+ facet_wrap(~`Airport Name`) +
+ theme_minimal() +
+ scale_y_continuous(labels = scales::dollar_format()) +
+ scale_color_manual(values = c("#FF7F7F", "#7FB3D5")) +
+ labs(title = "Revenue Composition (2021-2023)",
+      subtitle = "Aeronautical vs Non-Aeronautical Revenue",
+      y = "Revenue (Millions USD)",
+      x = "Year",
+      color = "Revenue Type") +
+ theme(
+   legend.position = "bottom",
+   plot.title = element_text(hjust = 0.5),
+   plot.subtitle = element_text(hjust = 0.5)
+ )
+```
+
+
+
+```{r}
+# First calculate the year-over-year changes for each category
+revenue_changes <- charleston_sav_analysis %>%
+  arrange(`Airport Name`, Year) %>%
+  group_by(`Airport Name`) %>%
+  mutate(
+    # Calculate YoY changes for each category
+    Total_Revenue_YoY = (`Total Operating Revenue` - lag(`Total Operating Revenue`)) / lag(`Total Operating Revenue`) * 100,
+    Passenger_Fees_YoY = (`Passenger airline landing fees` - lag(`Passenger airline landing fees`)) / lag(`Passenger airline landing fees`) * 100,
+    Parking_Revenue_YoY = (`Parking and ground transportation` - lag(`Parking and ground transportation`)) / lag(`Parking and ground transportation`) * 100,
+    Terminal_F_B_YoY = (`Terminal-food and beverage` - lag(`Terminal-food and beverage`)) / lag(`Terminal-food and beverage`) * 100,
+    Rental_Cars_YoY = (`Rental cars-excludes customer facility charges` - lag(`Rental cars-excludes customer facility charges`)) / lag(`Rental cars-excludes customer facility charges`) * 100
+  ) %>%
+  ungroup()
+
+# Now create the comparison visualization
+revenue_comparison <- revenue_changes %>%
+  select(`Airport Name`, Year,
+         Total_Revenue_YoY,
+         Passenger_Fees_YoY,
+         Parking_Revenue_YoY,
+         Terminal_F_B_YoY,
+         Rental_Cars_YoY) %>%
+  pivot_longer(cols = ends_with("YoY"),
+               names_to = "Category",
+               values_to = "Percent_Change") %>%
+  # Clean up category names for display
+  mutate(Category = gsub("_YoY", "", Category),
+         Category = gsub("_", " ", Category))
+
+# Create bar chart
+ggplot(revenue_comparison %>% filter(!is.na(Percent_Change)), 
+       aes(x = Category, y = Percent_Change, 
+           fill = `Airport Name`)) +
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           width = 0.7) +
+  facet_wrap(~Year, scales = "free_y") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(title = "Year-over-Year Revenue Changes by Category",
+       subtitle = "Comparing Charleston Int'l and Savannah Int'l between 2021-2022 and 2022-2023",
+       y = "Percent Change",
+       x = "") +
+  scale_fill_brewer(palette = "Set2")
+
+# Print summary statistics
+summary_stats <- revenue_comparison %>%
+  group_by(Category, `Airport Name`) %>%
+  summarize(
+    Mean_Change = mean(Percent_Change, na.rm = TRUE),
+    Max_Change = max(Percent_Change, na.rm = TRUE),
+    Min_Change = min(Percent_Change, na.rm = TRUE)
+  ) %>%
+  arrange(Category, `Airport Name`)
+
+print(summary_stats)
 ```
 Both Charleston and Savannah airports show consistent upward trends in operating expenses from 2021 to 2023. Charleston's expenses grew more significantly in absolute terms, rising from approximately $64M to $78M, while Savannah's increased from about $44M to $54M. The steepest increase for both airports occurred between 2022 and 2023, indicating accelerating operational costs in the most recent period, likely due to inflation and post-pandemic service expansion.
 
