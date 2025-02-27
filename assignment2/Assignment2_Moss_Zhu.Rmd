@@ -1,5 +1,5 @@
 ---
-title: "Assignment 1: Air Transport Since 2013, Winners and Losers "
+title: "Assignment 2: Bureau of Transportation Statistics (BTS) Finance "
 author: "Christina Moss and Hao Zhu"
 date: "`r Sys.Date()`" 
 output: 
@@ -33,7 +33,8 @@ library(ggplot2)
 In this analysis we will examine financial and budgeting patterns at the Savannah/Hilton Head International Airport and the Charleston International Airport. The cities of Savannah, GA and Charleston, SC are both attractive tourist destinations in the coastal south with relatively similar population sizes. The population of Charleston sits at around 155,000 residents and the populations of Savannah is at approximately 148,000 residents. Both cities boast picturesque parks, lovely cobblestone roads, and beautiful historic homes. This analysis will explore financial trends at the airports attached to these cities over the course of three years, 2021 to 2023. 
 
 ### Data Preparation 
-```{r}
+
+```{r data_load, warning=FALSE, message=FALSE}
 dat_2021 <- read_csv("Report127_2021.csv",
                      skip = 3,
                      na = "",
@@ -54,7 +55,7 @@ names(dat_2023) <- trimws(names(dat_2023))
 
 ```
 
-```{r}
+```{r data_cleanning, warning=FALSE, message=FALSE}
 charleston_sav_2123 <- rbind(
   dat_2021 %>% 
     filter(`Airport Name` %in% c("CHARLESTON INTL", "SAVANNAH INTERNATIONAL")),
@@ -69,13 +70,13 @@ charleston_sav_2123 <- charleston_sav_2123 %>%
   )
 
 # Verify the result
-print(charleston_sav_2123 %>% 
-  select(`Airport Name`, FYE, Year) %>%
-  arrange(Year, FYE))
+#print(charleston_sav_2123 %>% 
+  #select(`Airport Name`, FYE, Year) %>%
+  #arrange(Year, FYE))
 
 ```
 
-```{r}
+```{r data_analysis, warning=FALSE, message=FALSE}
 # Select relevant columns for analysis
 charleston_sav_analysis <- charleston_sav_2123 %>%
   select(
@@ -115,24 +116,39 @@ charleston_sav_analysis <- charleston_sav_2123 %>%
   )
 
 # Check the structure
-glimpse(charleston_sav_analysis)
+#glimpse(charleston_sav_analysis)
 ```
 
-### Exploring Revenue Breakdown Over Time 
-```{r}
+## Exploring Revenue Breakdown Over Time 
+
+
+```{r graphics, warning=FALSE, message=FALSE, fig.height=4, fig.width=8}
 # 1. total revenue comparison
 ggplot(charleston_sav_analysis, 
-       aes(x = Year, y = `Total Operating Revenue`/1000000, 
-           fill = `Airport Name`, 
+       aes(x = factor(Year), y = `Total Operating Revenue`, 
+           color = `Airport Name`, 
            group = `Airport Name`)) +
-  geom_bar(stat = "identity", position = "dodge") +
+  geom_line(size = 1) + 
+  geom_point(size = 2) + 
+  scale_color_brewer(palette = "Paired") +
+  scale_x_discrete(breaks = c("2021", "2022", "2023")) +
+  scale_y_continuous(labels = scales::label_number(prefix = "$", suffix = "M", scale = 1e-6)) +
   theme_minimal() +
-  scale_y_continuous(labels = scales::dollar_format()) +
+    theme(plot.subtitle = element_markdown()) + 
   labs(title = "Total Operating Revenue by Airport (2021-2023)",
-       y = "Revenue (Millions USD)",
-       x = "Year") +
-  theme(legend.position = "bottom")
+             subtitle = " **<span style='color:#a6cee3;'>CHARLESTON INTL</span>** vs **<span style='color:#1f78b4;'>SAVANNAH INTERNATIONAL</span>**",
 
+       y = "Total Operating Revenue",
+       x = "Year",
+       color = "Airport Name") +
+  theme(
+  legend.position = "none",
+  plot.subtitle = element_markdown())
+```
+
+Both airports show consistent revenue growth from 2021-2023, but Charleston International significantly outperforms Savannah with nearly double the revenue. While Savannah increased from $35M to $47M (34% growth), Charleston experienced more dramatic growth from $50M to $90M (80% growth). Despite their different scales, both airports demonstrate similar patterns of continued revenue growth throughout the period, reflecting the broader recovery and expansion in the regional air travel market following the pandemic.
+
+```{r graphic2, warning=FALSE, message=FALSE, fig.height=4, fig.width=8}
 # 2. revenue breakdown analysis
 revenue_breakdown <- charleston_sav_analysis %>%
   select(`Airport Name`, Year,
@@ -143,16 +159,23 @@ revenue_breakdown <- charleston_sav_analysis %>%
                values_to = "Amount")
 
 ggplot(revenue_breakdown, 
-       aes(x = Year, y = Amount/1000000, fill = Revenue_Type)) +
+       aes(x = Year, y = Amount, fill = Revenue_Type)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~`Airport Name`) +
+    scale_fill_brewer(palette = "PuBuGn") +
   theme_minimal() +
-  scale_y_continuous(labels = scales::dollar_format()) +
+  scale_y_continuous(labels = scales::label_number(prefix = "$", suffix = "M", scale = 1e-6)) +
   labs(title = "Revenue Composition by Airport",
-       y = "Revenue (Millions USD)",
+       y = "Amount ($M)",
        fill = "Revenue Type") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8),  # Smaller text
+    legend.title = element_blank() )
+```
 
+Both Charleston and Savannah International airports consistently generate more revenue from non-aeronautical sources than aeronautical sources across 2021-2023, with Charleston showing a particularly dramatic increase. Charleston's non-aeronautical revenue nearly doubled during this period, growing to represent over 60% of total revenue by 2023, while Savannah maintained a similar proportion but with more modest overall growth.
+
+```{r graphic3, warning=FALSE, message=FALSE, fig.height=4, fig.width=8}
 # 3. Detailed non-aeronautical revenue analysis
 non_aero_breakdown <- charleston_sav_analysis %>%
   select(`Airport Name`, Year,
@@ -165,17 +188,22 @@ non_aero_breakdown <- charleston_sav_analysis %>%
                values_to = "Amount")
 
 # Visualize non-aeronautical revenue breakdown
-ggplot(non_aero_breakdown, 
-       aes(x = Year, y = Amount/1000000, fill = Revenue_Source)) +
-  geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~`Airport Name`) +
+ggplot(non_aero_breakdown, aes(x = factor(Year), y = Amount, fill = Revenue_Source)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~`Airport Name`, scales = "free_y") +
+  scale_y_continuous(labels = scales::label_number(prefix = "$", suffix = "M", scale = 1e-6)) +
+  scale_fill_brewer(palette = "PuBuGn") +
   theme_minimal() +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  labs(title = "Non-Aeronautical Revenue Sources",
-       y = "Revenue (Millions USD)",
-       fill = "Revenue Source") +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle =0))
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),  # Smaller text
+    legend.title = element_blank() 
+  ) +
+  labs(x = "Year",
+       y = "Amount ($M)",
+       title = "Non-Aeronautical Revenue Sources by Airport",
+       fill = "Revenue Source")
 
 # 4. Calculate revenue per enplanement
 revenue_metrics <- charleston_sav_analysis %>%
@@ -186,102 +214,45 @@ revenue_metrics <- charleston_sav_analysis %>%
     Non_Aero_Revenue_Per_Enplanement = `Total Non-Aeronautical Revenue` / Enplanements
   )
 
-print(revenue_metrics)
-
+#print(revenue_metrics)
 ```
-### Exploring Cost Breakdown Over Time 
 
-```{r}
-<<<<<<< Updated upstream
-# Key Cost Metrics
-#`Personnel compensation and benefits`,
-#`Communications and utilities`,
-#`Supplies and materials`,
-#`Contractual services`,
-#`Total Operating Expenses`,
-#`Operating Income`,
+Parking and ground transportation represents the largest non-aeronautical revenue source at both airports, with Charleston experiencing remarkable growth in this category, tripling from $10M in 2021 to over $30M by 2023. Rental car revenue remains the second largest revenue source at both airports, while Savannah International shows more diversity in its terminal revenue with a more significant contribution from retail stores and duty-free compared to Charleston's greater emphasis on food and beverage.
 
-ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Total Operating Expenses`, group=`Airport Name`)) +
-  geom_line(aes(color=`Airport Name`)) +
-  geom_point(aes(color=`Airport Name`)) + 
-  scale_color_brewer(palette="Paired") +
-  scale_x_discrete(breaks=c("2021", "2022", "2023")) +
-  scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
-  theme_minimal() +
-  labs(x="Year",
-       y="Total Operating Expenses",
-       color="Airport Name")
-=======
-ggplot(charleston_sav_analysis, 
-       aes(x = as.factor(Year), y = `Total Operating Revenue`/1000000, 
-           color = `Airport Name`, 
-           group = `Airport Name`)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 3) +
-  theme_minimal() +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  labs(title = "Total Operating Revenue (2021-2023)",
-       subtitle = "Charleston Int'l vs Savannah Int'l",
-       y = "Revenue (Millions USD)",
-       x = "Year",
-       color = "Airport Name") +
-  theme(legend.position = "bottom") +
-  scale_color_manual(values = c("#FF7F7F", "#7FB3D5"))
->>>>>>> Stashed changes
 
-# Create better formatted summary table
-summary_table <- revenue_changes %>%
- select(`Airport Name`, Year,
-        `Total Operating Revenue`,
-        Total_Revenue_YoY,
-        Aero_Revenue_YoY,
-        Non_Aero_Revenue_YoY) %>%
- arrange(`Airport Name`, Year) %>%
- mutate(
-   Year_Change = paste(Year-1, "to", Year),
-   # Rename and format percentage columns
-   `Total Revenue Change` = sprintf("%.1f%%", Total_Revenue_YoY),
-   `Aeronautical Revenue Change` = sprintf("%.1f%%", Aero_Revenue_YoY),
-   `Non-Aeronautical Revenue Change` = sprintf("%.1f%%", Non_Aero_Revenue_YoY)
- ) %>%
- filter(!is.na(Total_Revenue_YoY)) %>%  # Remove rows where YoY can't be calculated
- select(`Airport Name`, Year_Change, 
-        `Total Revenue Change`,
-        `Aeronautical Revenue Change`,
-        `Non-Aeronautical Revenue Change`) %>%
- arrange(Year_Change)
-
-# Print formatted table
-print("Revenue Changes by Year")
-print(summary_table)
-
-# Improved revenue composition plot
+```{r reve_plot, fig.height=4, fig.width=8}
 ggplot(charleston_sav_analysis, 
       aes(x = as.factor(Year))) +
- geom_line(aes(y = `Total Aeronautical Revenue`/1000000, color = "Aeronautical", group = 1), size = 1.2) +
- geom_line(aes(y = `Total Non-Aeronautical Revenue`/1000000, color = "Non-Aeronautical", group = 1), size = 1.2) +
- geom_point(aes(y = `Total Aeronautical Revenue`/1000000, color = "Aeronautical"), size = 3) +
- geom_point(aes(y = `Total Non-Aeronautical Revenue`/1000000, color = "Non-Aeronautical"), size = 3) +
+ geom_line(aes(y = `Total Aeronautical Revenue`, color = "Aeronautical", group = 1), size = 0.8) +
+ geom_line(aes(y = `Total Non-Aeronautical Revenue`, color = "Non-Aeronautical", group = 1), size = 0.8) +
+ geom_point(aes(y = `Total Aeronautical Revenue`, color = "Aeronautical"), size = 2) +
+ geom_point(aes(y = `Total Non-Aeronautical Revenue`, color = "Non-Aeronautical"), size = 2) +
  facet_wrap(~`Airport Name`) +
  theme_minimal() +
- scale_y_continuous(labels = scales::dollar_format()) +
- scale_color_manual(values = c("#FF7F7F", "#7FB3D5")) +
+  theme(plot.subtitle = element_markdown()) + 
+ scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
+ scale_color_brewer(palette="Paired") +
+ #scale_color_manual(values = c("#FF7F7F", "#7FB3D5")) +
  labs(title = "Revenue Composition (2021-2023)",
-      subtitle = "Aeronautical vs Non-Aeronautical Revenue",
-      y = "Revenue (Millions USD)",
+      subtitle = " **<span style='color:#a6cee3;'>Aeronautical</span>** vs **<span style='color:#1f78b4;'>Non-Aeronautical</span>** Revenue",
+      y = "Amount ($M)",
       x = "Year",
-      color = "Revenue Type") +
- theme(
-   legend.position = "bottom",
-   plot.title = element_text(hjust = 0.5),
-   plot.subtitle = element_text(hjust = 0.5)
- )
+      color = "Revenue Type")+
+  theme(
+  legend.position = "none",
+  plot.subtitle = element_markdown()
+)#+
+# theme(
+#   legend.position = "bottom",
+#   plot.title = element_text(hjust = 0.5),
+#   plot.subtitle = element_text(hjust = 0.5)
+# )
+
 ```
+The chart shows Charleston's remarkable non-aeronautical revenue growth, more than doubling from approximately $27M in 2021 to nearly $60M by 2023, significantly outpacing its aeronautical revenue growth. In contrast, Savannah shows more modest and balanced growth across both revenue streams, with non-aeronautical revenue increasing from about $22M to $30M.
 
-
-
-```{r}
-# First calculate the year-over-year changes for each category
+```{r fig.height=4, fig.width=8}
+# year-over-year changes for each category
 revenue_changes <- charleston_sav_analysis %>%
   arrange(`Airport Name`, Year) %>%
   group_by(`Airport Name`) %>%
@@ -309,7 +280,10 @@ revenue_comparison <- revenue_changes %>%
   # Clean up category names for display
   mutate(Category = gsub("_YoY", "", Category),
          Category = gsub("_", " ", Category))
+```
 
+
+```{r include=FALSE}
 # Create bar chart
 ggplot(revenue_comparison %>% filter(!is.na(Percent_Change)), 
        aes(x = Category, y = Percent_Change, 
@@ -326,27 +300,119 @@ ggplot(revenue_comparison %>% filter(!is.na(Percent_Change)),
        subtitle = "Comparing Charleston Int'l and Savannah Int'l between 2021-2022 and 2022-2023",
        y = "Percent Change",
        x = "") +
-  scale_fill_brewer(palette = "Set2")
+  scale_fill_brewer(palette = "PuBuGn")
+```
 
-# Print summary statistics
+
+```{r fig.height=4, fig.width=8}
+# Creating the year-over-year comparison with Year as the x-axis
+revenue_comparison <- revenue_changes %>%
+  select(`Airport Name`, Year,
+         Total_Revenue_YoY,
+         Passenger_Fees_YoY,
+         Parking_Revenue_YoY,
+         Terminal_F_B_YoY,
+         Rental_Cars_YoY) %>%
+  pivot_longer(cols = ends_with("YoY"),
+               names_to = "Category",
+               values_to = "Percent_Change") %>%
+  # Clean up category names for display
+  mutate(Category = gsub("_YoY", "", Category),
+         Category = gsub("_", " ", Category))
+
+# Create bar chart with Year on x-axis
+ggplot(revenue_comparison %>% filter(!is.na(Percent_Change)), 
+       aes(x = factor(Year), y = Percent_Change, 
+           fill = Category)) +
+  geom_bar(stat = "identity", 
+           position = "dodge",
+           width = 0.7) +
+  facet_wrap(~`Airport Name`, scales = "fixed") +  # Changed to fixed scales
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
+        legend.position = "bottom",
+        legend.text = element_text(size = 6),  # Smaller text
+    legend.title = element_blank() ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(title = "Revenue Changes by Category",
+       subtitle = "Comparing Charleston Int'l and Savannah Int'l (2021-2023)",
+       y = "Percent Change",
+       x = NULL,
+       fill = "Revenue Category") +
+  scale_fill_brewer(palette = "PuBuGn")
+```
+
+```{r}
+# Print summary statistics with kable
 summary_stats <- revenue_comparison %>%
   group_by(Category, `Airport Name`) %>%
   summarize(
     Mean_Change = mean(Percent_Change, na.rm = TRUE),
     Max_Change = max(Percent_Change, na.rm = TRUE),
-    Min_Change = min(Percent_Change, na.rm = TRUE)
+    Min_Change = min(Percent_Change, na.rm = TRUE),
+    .groups = "drop"
   ) %>%
-  arrange(Category, `Airport Name`)
+  arrange(Category, `Airport Name`) %>%
+  mutate(
+    Mean_Change = round(Mean_Change, 2),
+   Max_Change = round(Max_Change, 2),
+   Min_Change = round(Min_Change, 2)
+  )
 
-print(summary_stats)
+# Create a nicely formatted table with kable
+summary_stats %>%
+  kable(
+    format = "markdown",
+    col.names = c("Revenue Category", "Airport", "Mean Change (%)", "Max Change (%)", "Min Change (%)"),
+    caption = "Percentage Changes in Revenue Categories (2021-2023)",
+    digits = 2,
+    align = c('l', 'l', 'r', 'r', 'r')
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  ) %>%
+  add_header_above(c(" " = 2, "Year-over-Year Changes (%)" = 3))
+
 ```
+
+The Revenue Changes by Category chart highlights dramatic percentage increases across revenue categories, with Charleston's parking revenue rising an extraordinary 152% in 2022. Terminal food and beverage showed remarkable growth at both airports, with Savannah experiencing a 102.4% increase in 2022 compared to Charleston's 63.8%. Passenger fees grew substantially at both locations, while rental cars showed divergent patterns with Charleston maintaining positive growth and Savannah experiencing negative growth by 2023. These percentage changes indicate significant post-pandemic recovery with notably different trajectories at the two airports.
+
+The detailed percentage table from 2021 to 2023 demonstrates post-pandemic recovery with diverging fortunes. Charleston's impressive mean change of 89.6% in parking revenue vastly outperforms Savannah's 35.6%, suggesting highly successful parking management strategies or increased visitor volume. Savannah shows concerning negative minimum values in both rental cars (-5.6%) and terminal food and beverage (-6.9%), indicating volatility in these revenue streams. Charleston maintained positive growth across all categories, with terminal food and beverage delivering the most consistent performance (minimum change of 39.4%). Particularly noteworthy is the difference in total revenue growth, where Charleston's mean change of 33.8% more than doubles Savannah's 14.6%, revealing fundamentally different revenue recovery patterns despite the airports' regional proximity. These trends suggest Charleston has implemented more effective commercial strategies or benefits from stronger local economic factors driving airport usage.
+
+
+## Exploring Cost Breakdown Over Time 
+
+```{r fig.height=4, fig.width=8}
+# Key Cost Metrics
+#`Personnel compensation and benefits`,
+#`Communications and utilities`,
+#`Supplies and materials`,
+#`Contractual services`,
+#`Total Operating Expenses`,
+#`Operating Income`,
+
+ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Total Operating Expenses`, group=`Airport Name`)) +
+  geom_line(aes(color=`Airport Name`), size = 1) +
+  geom_point(aes(color=`Airport Name`), size = 2) + 
+  scale_color_brewer(palette="Paired") +
+  scale_x_discrete(breaks=c("2021", "2022", "2023")) +
+  scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
+  theme_minimal() +
+  labs(x="Year",
+       y="Total Operating Expenses",
+       color="Airport Name")
+
+```
+
+
 Both Charleston and Savannah airports show consistent upward trends in operating expenses from 2021 to 2023. Charleston's expenses grew more significantly in absolute terms, rising from approximately $64M to $78M, while Savannah's increased from about $44M to $54M. The steepest increase for both airports occurred between 2022 and 2023, indicating accelerating operational costs in the most recent period, likely due to inflation and post-pandemic service expansion.
 
-```{r}
+```{r fig.height=4, fig.width=8}
 # Visualizing expenses vs. income 
 ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Operating Income`, group=`Airport Name`)) +
-  geom_line(aes(color=`Airport Name`)) +
-  geom_point(aes(color=`Airport Name`)) + 
+  geom_line(aes(color=`Airport Name`), size = 1) +
+  geom_point(aes(color=`Airport Name`), size = 2) + 
   scale_color_brewer(palette="Paired") +
   scale_x_discrete(breaks=c("2021", "2022", "2023")) +
   scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
@@ -355,9 +421,10 @@ ggplot(charleston_sav_analysis, aes(x=factor(Year), y=`Operating Income`, group=
        y="Total Operating Income",
        color="Airport Name")
 ```
+
 The operating income chart reveals dramatically different financial trajectories between the two airports. Charleston transformed from a substantial deficit of approximately -$14M in 2021 to a healthy surplus of nearly $10M by 2023, demonstrating remarkable financial recovery. In contrast, Savannah briefly reached profitability in 2022 but declined again in 2023 to around -$6M, suggesting challenges in maintaining revenue growth relative to rising expenses.
 
-```{r}
+```{r fig.height=4, fig.width=8}
 expenses_long <- charleston_sav_analysis %>%
   pivot_longer(
     cols = c(`Personnel compensation and benefits`,
@@ -372,17 +439,20 @@ ggplot(expenses_long, aes(x=factor(Year), y=Amount, fill=Category)) +
   geom_col(position="dodge") +
   facet_wrap(~`Airport Name`, scales="free_y") +
   scale_y_continuous(labels = scales::label_number(prefix="$", suffix="M", scale=1e-6)) +
-  scale_fill_brewer(palette="Set2") +
+  scale_fill_brewer(palette="PuBuGn") +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "bottom"
+    axis.text.x = element_text(angle = 0, hjust = 1),
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),  # Smaller text
+    legend.title = element_blank() 
   ) +
-  labs(x="Year",
+  labs(x=NULL,
        y="Amount ($M)",
        title="Expense Categories by Airport Over Time",
        fill="Expense Category")
 ```
+
 Personnel compensation and benefits constitute the largest expense category for both airports, with significant increases in 2023. Charleston shows balanced growth across all expense categories, while Savannah displays disproportionate spending on supplies compared to contractual services. Both airports increased personnel expenditures in 2023, reflecting likely staffing expansions and wage increases to address post-pandemic operational demands.
 
 ```{r expense_table}
@@ -443,9 +513,32 @@ changes_table <- charleston_sav_analysis %>%
   mutate(across(where(is.numeric), ~round(., 1)))
 
 
+#changes_table %>%
+  #kable(format = "markdown", 
+        #caption = "Percentage Changes in Expense Categories (2021-2023)")
+
+
 changes_table %>%
-  kable(format = "markdown", 
-        caption = "Percentage Changes in Expense Categories (2021-2023)")
+  kable(
+    format = "markdown",
+    col.names = c("Airport", 
+                 "Personnel 2021-2022", "Personnel 2022-2023", "Personnel Total",
+                 "Communications 2021-2022", "Communications 2022-2023", "Communications Total",
+                 "Supplies 2021-2022", "Supplies 2022-2023", "Supplies Total",
+                 "Contractual 2021-2022", "Contractual 2022-2023", "Contractual Total"),
+    caption = "Percentage Changes in Expense Categories (2021-2023)",
+    digits = 1,
+    align = c('l', rep('r', 12))
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  ) %>%
+  add_header_above(c(" " = 1, 
+                    "Personnel (%)" = 3, 
+                    "Communications (%)" = 3, 
+                    "Supplies (%)" = 3, 
+                    "Contractual Services (%)" = 3))
 ```
 This chart highlights dramatic percentage increases across expense categories, with Charleston's supplies costs rising an extraordinary 181.7% over the period. Personnel costs grew substantially at both airports, with Savannah experiencing a 47.1% increase from 2022-2023 compared to Charleston's 32.3%. Communications costs increased steadily at both locations, while contractual services showed more modest growth. These percentage changes indicate significant operational expansions and perhaps inflationary pressures affecting both airports' financial management.
 
