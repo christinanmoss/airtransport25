@@ -1,0 +1,435 @@
+---
+title: "Assignment 3: Penn & Intercity Transportation "
+author: "Christina Moss and Hao Zhu"
+date: "`r Sys.Date()`" 
+output: 
+  html_document:
+    toc: true 
+    theme: sandstone
+    toc_float: true
+    toc_depth: 2 
+    code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(viridis)
+library(scales)
+library(knitr)
+library(ggtext)
+```
+
+```{r load_data, warning=FALSE, message=FALSE}
+travel_data <- read_csv("travelSurveyData_longDistTravel.csv")
+#str(travel_data)
+#head(travel_data)
+#summary(travel_data)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+#colSums(is.na(travel_data))
+
+long_dist_travelers <- travel_data %>%
+  filter(longdistYN == "Yes")
+#nrow(long_dist_travelers)
+```
+
+## Analysis Part 1: Summarize Penn Faculty/Staff Intercity Transportation Preferences
+
+```{r, warning=FALSE, message=FALSE, fig.height=4, fig.width=8}
+# Create functions to categorize modes
+categorize_mode <- function(mode) {
+  if (grepl("Amtrak", mode)) {
+    return("Amtrak")
+  } else if (grepl("fly", mode)) {
+    return("Fly")
+  } else if (grepl("Drive|drive|park", mode)) {
+    return("Drive")
+  } else if (grepl("Megabus", mode)) {
+    return("Bus")
+  } else {
+    return("Other")
+  }
+}
+
+# Count travelers by destination
+nyc_travelers <- long_dist_travelers %>%
+  filter(!is.na(longdistTripsNYC)) %>%
+  mutate(mode_category = sapply(longdistTripsNYC, categorize_mode))
+
+boston_travelers <- long_dist_travelers %>%
+  filter(!is.na(longdistTripsBos)) %>%
+  mutate(mode_category = sapply(longdistTripsBos, categorize_mode))
+
+pittsburgh_travelers <- long_dist_travelers %>%
+  filter(!is.na(longdistTripsPitt)) %>%
+  mutate(mode_category = sapply(longdistTripsPitt, categorize_mode))
+
+# Summarize mode preferences by destination
+nyc_mode_summary <- nyc_travelers %>%
+  count(mode_category) %>%
+  mutate(percentage = n/sum(n)*100,
+         destination = "New York City")
+
+boston_mode_summary <- boston_travelers %>%
+  count(mode_category) %>%
+  mutate(percentage = n/sum(n)*100,
+         destination = "Boston")
+
+pittsburgh_mode_summary <- pittsburgh_travelers %>%
+  count(mode_category) %>%
+  mutate(percentage = n/sum(n)*100,
+         destination = "Pittsburgh")
+
+# Combine all summaries
+all_mode_summary <- bind_rows(nyc_mode_summary, boston_mode_summary, pittsburgh_mode_summary)
+
+# Create a visualization of mode preferences by destination
+ggplot(all_mode_summary, aes(x = destination, y = percentage, fill = mode_category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title = "Transportation Mode Preferences by Destination",
+       x = "Destination",
+       y = "Percentage (%)",
+       fill = "Mode of Transport") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+```
+
+```{r, warning=FALSE, message=FALSE}
+mode_summary_table <- all_mode_summary %>%
+  select(destination, mode_category, n, percentage) %>%
+  arrange(destination, desc(percentage)) %>%
+  mutate(percentage = sprintf("%.1f%%", percentage))
+
+kable(mode_summary_table, 
+      col.names = c("Destination", "Mode of Transport", "Count", "Percentage"),
+      caption = "Transportation Mode Preferences by Destination")
+```
+
+## Analysis Part 2: Analyze Travel Preferences by Selected Variables
+
+gender, income, and home location
+
+### Gender
+
+```{r, warning=FALSE, message=FALSE}
+analyze_by_variable <- function(data, variable_col, dest_col) {
+  data %>%
+    filter(!is.na(!!sym(variable_col)), !is.na(!!sym(dest_col))) %>%
+    mutate(mode_category = sapply(!!sym(dest_col), categorize_mode)) %>%
+    group_by(!!sym(variable_col), mode_category) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    group_by(!!sym(variable_col)) %>%
+    mutate(percentage = count/sum(count)*100)
+}
+
+# Gender analysis for each destination
+gender_nyc <- analyze_by_variable(long_dist_travelers, "gender", "longdistTripsNYC") %>%
+  mutate(destination = "New York City")
+
+gender_boston <- analyze_by_variable(long_dist_travelers, "gender", "longdistTripsBos") %>%
+  mutate(destination = "Boston")
+
+gender_pittsburgh <- analyze_by_variable(long_dist_travelers, "gender", "longdistTripsPitt") %>%
+  mutate(destination = "Pittsburgh")
+
+# Combine gender analyses
+gender_all <- bind_rows(gender_nyc, gender_boston, gender_pittsburgh)
+
+
+
+```
+
+
+```{r,warning=FALSE, message=FALSE}
+# First, prepare data specifically for stacked percentages
+gender_stack_data <- long_dist_travelers %>%
+  filter(!is.na(gender), gender %in% c("Man", "Woman")) %>%
+  mutate(
+    nyc_mode = sapply(longdistTripsNYC, categorize_mode),
+    boston_mode = sapply(longdistTripsBos, categorize_mode),
+    pittsburgh_mode = sapply(longdistTripsPitt, categorize_mode)
+  )
+
+# Create separate dataframes for each destination
+nyc_gender <- gender_stack_data %>%
+  filter(!is.na(nyc_mode), nyc_mode != "Other") %>%  # Exclude "Other" category
+  group_by(gender, nyc_mode) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(nyc_mode) %>%
+  mutate(
+    total = sum(count),
+    percentage = count / total * 100
+  ) %>%
+  rename(mode_category = nyc_mode) %>%
+  mutate(destination = "New York City")
+
+boston_gender <- gender_stack_data %>%
+  filter(!is.na(boston_mode), boston_mode != "Other") %>%  # Exclude "Other" category
+  group_by(gender, boston_mode) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(boston_mode) %>%
+  mutate(
+    total = sum(count),
+    percentage = count / total * 100
+  ) %>%
+  rename(mode_category = boston_mode) %>%
+  mutate(destination = "Boston")
+
+pittsburgh_gender <- gender_stack_data %>%
+  filter(!is.na(pittsburgh_mode), pittsburgh_mode != "Other") %>%  # Exclude "Other" category
+  group_by(gender, pittsburgh_mode) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(pittsburgh_mode) %>%
+  mutate(
+    total = sum(count),
+    percentage = count / total * 100
+  ) %>%
+  rename(mode_category = pittsburgh_mode) %>%
+  mutate(destination = "Pittsburgh")
+
+# Combine all destinations
+all_gender_stacked <- bind_rows(nyc_gender, boston_gender, pittsburgh_gender)
+
+# Create stacked bar chart showing gender distribution within each mode
+ggplot(all_gender_stacked, aes(x = mode_category, y = percentage, fill = gender)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~destination) +
+  scale_fill_manual(values = c("Man" = "#3366CC", "Woman" = "#CC6677")) +
+  labs(title = "Gender Distribution within Transportation Modes by Destination",
+       subtitle = "Percentage of men vs. women using each transportation mode",
+       x = "Mode of Transport",
+       y = "Percentage (%)",
+       fill = "Gender") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r, include=FALSE, eval=FALSE}
+# Plot improved direct comparison
+ggplot(gender_compare, aes(x = mode_category, y = difference)) +
+  geom_col(aes(fill = difference > 0), width = 0.7) +
+  facet_wrap(~destination) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", size = 1) +
+  # Add value labels to make differences explicit
+  geom_text(aes(y = label_position, 
+                label = sprintf("%+.1f%%", difference),
+                color = difference > 0),
+            size = 3.5) +
+  # Better colors and clearer labeling
+  scale_fill_manual(values = c("TRUE" = "#CC6677", "FALSE" = "#3366CC")) +
+  scale_color_manual(values = c("TRUE" = "#882244", "FALSE" = "#224488")) +
+  # Improve title and subtitle with colored text
+  labs(title = "Gender Differences in Transportation Preferences",
+       subtitle = "<span style='color:#CC6677;'>Red bars: women prefer this mode more</span> | <span style='color:#3366CC;'>Blue bars: men prefer this mode more</span>",
+       x = "Mode of Transport",
+       y = "Difference in Percentage (Women - Men)") +
+  # Adjust theme for better readability - fixed duplicate plot.subtitle
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "#f0f0f0", color = NA),
+    strip.text = element_text(face = "bold", size = 11),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, face = "bold"),
+    plot.subtitle = element_markdown(size = 10)
+  ) +
+  guides(fill = FALSE, color = FALSE)
+
+```
+
+### Income
+
+
+
+```{r, warning=FALSE, message=FALSE}
+# First, let's explicitly define the income groups with a specific factor order
+long_dist_travelers <- long_dist_travelers %>%
+  mutate(income_group = factor(
+    case_when(
+      income %in% c("Less than $20,000", "$20,000 - $39,999", "$40,000 - $59,999") ~ "Low Income (<$60k)",
+      income %in% c("$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999") ~ "Middle Income ($60k-$120k)",
+      TRUE ~ "High Income (>$120k)"
+    ),
+    levels = c("Low Income (<$60k)", "Middle Income ($60k-$120k)", "High Income (>$120k)")
+  ))
+
+# Now create comparison for all three income groups
+# Create separate analyses for each destination
+income_nyc <- long_dist_travelers %>%
+  filter(!is.na(income_group), !is.na(longdistTripsNYC)) %>%
+  mutate(mode_category = sapply(longdistTripsNYC, categorize_mode)) %>%
+  group_by(income_group, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(income_group) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "New York City")
+
+income_boston <- long_dist_travelers %>%
+  filter(!is.na(income_group), !is.na(longdistTripsBos)) %>%
+  mutate(mode_category = sapply(longdistTripsBos, categorize_mode)) %>%
+  group_by(income_group, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(income_group) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "Boston")
+
+income_pittsburgh <- long_dist_travelers %>%
+  filter(!is.na(income_group), !is.na(longdistTripsPitt)) %>%
+  mutate(mode_category = sapply(longdistTripsPitt, categorize_mode)) %>%
+  group_by(income_group, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(income_group) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "Pittsburgh")
+
+# Combine income analyses
+income_all <- bind_rows(income_nyc, income_boston, income_pittsburgh)
+
+# Create a visualization that includes all three income groups in the right order
+# The factor levels we set earlier will control both legend and bar order
+ggplot(income_all, aes(x = mode_category, y = percentage, fill = income_group)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  facet_wrap(~destination) +
+  scale_fill_manual(values = c(
+    "Low Income (<$60k)" = "#BC4B51", 
+    "Middle Income ($60k-$120k)" = "#F4A259", 
+    "High Income (>$120k)" = "#8CB369"
+  )) +
+  labs(title = "Transportation Preferences by Income Level",
+       subtitle = "Comparing low, middle, and high income travelers across destinations",
+       x = "Mode of Transport",
+       y = "Percentage (%)",
+       fill = "Income Group") +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "#f0f0f0", color = NA),
+    strip.text = element_text(face = "bold", size = 11),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  ) +
+  guides(fill = guide_legend(reverse = FALSE)) # Ensure the legend order matches the factor levels
+```
+
+### Home Location
+
+```{r, warning=FALSE, message=FALSE}
+# Define the function to determine home region based on coordinates
+determine_region <- function(lat, lon) {
+  # Philadelphia Center City: ~39.95, -75.16
+  if (is.na(lat) || is.na(lon)) {
+    return(NA)
+  } else if (lat >= 39.9 && lat <= 40.0 && lon >= -75.2 && lon <= -75.1) {
+    return("Center City")
+  }
+  # University City: ~39.95, -75.19
+  else if (lat >= 39.94 && lat <= 39.97 && lon >= -75.22 && lon <= -75.18) {
+    return("University City")
+  }
+  # West Philly: ~39.95, -75.23
+  else if (lat >= 39.94 && lat <= 39.98 && lon >= -75.25 && lon <= -75.22) {
+    return("West Philadelphia")
+  }
+  # North Philly: ~40.0, -75.15
+  else if (lat >= 40.0 && lat <= 40.1 && lon >= -75.2 && lon <= -75.1) {
+    return("North Philadelphia")
+  }
+  # South Philly: ~39.92, -75.17
+  else if (lat >= 39.9 && lat <= 39.94 && lon >= -75.2 && lon <= -75.1) {
+    return("South Philadelphia")
+  }
+  # Suburbs: Other coordinates in the general region
+  else if (lat >= 39.8 && lat <= 40.2 && lon >= -75.4 && lon <= -74.9) {
+    return("Philadelphia Suburbs")
+  }
+  else {
+    return("Other")
+  }
+}
+
+# Now let's assign home regions to travelers
+long_dist_travelers <- long_dist_travelers %>%
+  rowwise() %>%
+  mutate(home_region = determine_region(originlat, originlon)) %>%
+  ungroup() %>%
+  mutate(home_region = factor(home_region, 
+                             levels = c("Center City", "University City", "West Philadelphia", 
+                                       "North Philadelphia", "South Philadelphia", "Philadelphia Suburbs", "Other")))
+
+# For a cleaner visualization, let's focus on the main Philadelphia regions
+# We'll compare Center City, University City, and Philadelphia Suburbs
+main_regions <- c("Center City", "University City", "Philadelphia Suburbs")
+
+# Create separate analyses for each destination
+location_nyc <- long_dist_travelers %>%
+  filter(home_region %in% main_regions, !is.na(longdistTripsNYC)) %>%
+  mutate(mode_category = sapply(longdistTripsNYC, categorize_mode)) %>%
+  group_by(home_region, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(home_region) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "New York City")
+
+location_boston <- long_dist_travelers %>%
+  filter(home_region %in% main_regions, !is.na(longdistTripsBos)) %>%
+  mutate(mode_category = sapply(longdistTripsBos, categorize_mode)) %>%
+  group_by(home_region, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(home_region) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "Boston")
+
+location_pittsburgh <- long_dist_travelers %>%
+  filter(home_region %in% main_regions, !is.na(longdistTripsPitt)) %>%
+  mutate(mode_category = sapply(longdistTripsPitt, categorize_mode)) %>%
+  group_by(home_region, mode_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(home_region) %>%
+  mutate(percentage = count/sum(count)*100,
+         destination = "Pittsburgh")
+
+# Combine location analyses
+location_all <- bind_rows(location_nyc, location_boston, location_pittsburgh)
+
+location_summary <- location_all %>%
+  select(home_region, destination, mode_category, percentage) %>%
+  # Make sure mode_category is in a consistent order
+  mutate(mode_category = factor(mode_category, levels = c("Amtrak", "Bus", "Drive", "Fly")))
+
+# Create a more straightforward visualization that compares all three regions directly
+ggplot(location_summary, aes(x = mode_category, y = percentage, fill = home_region)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  facet_wrap(~destination, ncol = 3) +
+  scale_fill_manual(values = c(
+    "Center City" = "#4B86BC", 
+    "University City" = "#8CB369", 
+    "Philadelphia Suburbs" = "#F4A259"
+  )) +
+  labs(title = "Transportation Preferences by Home Location",
+       subtitle = "Comparing Center City, University City, and Philadelphia Suburbs",
+       x = "Mode of Transport",
+       y = "Percentage (%)",
+       fill = "Home Location") +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "#f0f0f0", color = NA),
+    strip.text = element_text(face = "bold", size = 11),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+```
